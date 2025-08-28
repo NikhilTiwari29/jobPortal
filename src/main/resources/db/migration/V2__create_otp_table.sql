@@ -1,0 +1,6 @@
+CREATE TABLE otp (
+    id BINARY(16) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    otp_code VARCHAR(6) NOT NULL,
+    creation_time TIMESTAMP NOT NULL
+);
