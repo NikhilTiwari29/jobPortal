@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -30,7 +30,7 @@ public class ExceptionControllerAdvice {
     public ResponseEntity<ErrorInfo> generalException(Exception e) {
         log.error("Unexpected error occurred: {}", e.getMessage(), e);
         ErrorInfo error = new ErrorInfo(
-                e.getMessage(),
+                List.of(e.getMessage()),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 LocalDateTime.now()
         );
@@ -43,7 +43,7 @@ public class ExceptionControllerAdvice {
         String message = messageSource.getMessage(e.getMessage(), null, Locale.getDefault());
 
         ErrorInfo error = new ErrorInfo(
-                message,
+                List.of(message),
                 HttpStatus.CONFLICT.value(),
                 LocalDateTime.now()
         );
@@ -54,13 +54,13 @@ public class ExceptionControllerAdvice {
 
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     public ResponseEntity<ErrorInfo> validatorExceptionHandler(Exception e) {
-        String message;
+        List<String> message;
         if (e instanceof MethodArgumentNotValidException methodArgumentNotValidException) {
             message = methodArgumentNotValidException
                     .getAllErrors()
                     .stream()
                     .map(ObjectError::getDefaultMessage)
-                    .collect(Collectors.joining(", "));
+                    .toList();
             log.warn("Validation failed: {}", message);
         } else {
             ConstraintViolationException constraintViolationException = (ConstraintViolationException) e;
@@ -68,7 +68,7 @@ public class ExceptionControllerAdvice {
                     .getConstraintViolations()
                     .stream()
                     .map(ConstraintViolation::getMessage)
-                    .collect(Collectors.joining(", "));
+                    .toList();
             log.warn("Constraint violation: {}", message);
         }
 

@@ -34,6 +34,9 @@ dependencies {
     testImplementation("org.assertj:assertj-core:4.0.0-M1")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:mysql")
 }
 
 tasks.withType<Test> {
