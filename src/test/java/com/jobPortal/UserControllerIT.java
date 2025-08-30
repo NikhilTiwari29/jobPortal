@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,6 +26,9 @@ public class UserControllerIT {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private User user;
     private UserDTO userDto;
@@ -175,9 +179,9 @@ public class UserControllerIT {
                 .expectBody()
                 .jsonPath("$.accountType").isEqualTo("APPLICANT");
 
-        User jobSeekerUser = userRepository.findByEmail("jobseeker@example.com").orElse(null);
-        assertThat(jobSeekerUser).isNotNull();
-        assertThat(jobSeekerUser.getAccountType()).isEqualTo(AccountType.APPLICANT);
+        User testUser = userRepository.findByEmail("jobseeker@example.com").orElse(null);
+        assertThat(testUser).isNotNull();
+        assertThat(testUser.getAccountType()).isEqualTo(AccountType.APPLICANT);
     }
 
     @Test
@@ -196,5 +200,99 @@ public class UserControllerIT {
                 .jsonPath("$.errorCode").isEqualTo(409);
 
         assertThat(userRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void loginUser_success(){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+
+        webTestClient.post()
+                .uri("/users/login")
+                .bodyValue(loginDto)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.email").isEqualTo(loginDto.getEmail());
+
+        User testUser = userRepository.findByEmail(loginDto.getEmail()).orElse(null);
+        assertThat(testUser).isNotNull();
+    }
+
+    @Test
+    void loginUser_emailNotFound(){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+
+        loginDto.setEmail("wrong@gmail.com");
+
+        webTestClient.post()
+                .uri("/users/login")
+                .bodyValue(loginDto)
+                .exchange()
+                .expectStatus().is4xxClientError()
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("No account found with this email. Please check and try again.")
+                .jsonPath("$.errorCode").isEqualTo(409);
+
+        User testUser = userRepository.findByEmail(loginDto.getEmail()).orElse(null);
+        assertThat(testUser).isNull();
+    }
+
+    @Test
+    void loginUser_wrongPassword(){
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+
+        loginDto.setPassword("wrongPass@1234");
+
+        webTestClient.post()
+                .uri("/users/login")
+                .bodyValue(loginDto)
+                .exchange()
+                .expectStatus().is4xxClientError()
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("The email or password you entered is incorrect. Please try again.")
+                .jsonPath("$.errorCode").isEqualTo(409);
+
+    }
+
+    @Test
+    void loginUser_inValidEmailFormat(){
+
+        loginDto.setEmail("invalidEmailFormat.com");
+
+        webTestClient.post()
+                .uri("/users/login")
+                .bodyValue(loginDto)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("Enter a valid email address (example: name@domain.com).")
+                .jsonPath("$.errorCode").isEqualTo(400);
+
+    }
+
+    @Test
+    void loginUser_inValidPasswordFormat(){
+
+        loginDto.setPassword("pass");
+
+        webTestClient.post()
+                .uri("/users/login")
+                .bodyValue(loginDto)
+                .exchange()
+                .expectBody()
+                .jsonPath("$.errorMessages").isArray()
+                .jsonPath("$.errorMessages").value(messages -> {
+                    @SuppressWarnings("unchecked")
+                    var errorList = (java.util.List<String>) messages;
+                    assertThat(errorList).contains(
+                            "Password must be at least 8 characters long.",
+                            "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character."
+                    );
+                })
+                .jsonPath("$.errorCode").isEqualTo(400);
+
     }
 }
