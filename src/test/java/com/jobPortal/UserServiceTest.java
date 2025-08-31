@@ -1,5 +1,6 @@
 package com.jobPortal;
 
+import com.jobPortal.dto.ChangePasswordRequestDTO;
 import com.jobPortal.dto.LoginDTO;
 import com.jobPortal.dto.UserDTO;
 import com.jobPortal.entity.User;
@@ -41,6 +42,10 @@ public class UserServiceTest {
 
     private LoginDTO loginDto;
 
+    private User user;
+
+    private ChangePasswordRequestDTO changePasswordRequestDTO;
+
     @BeforeEach
     void setUp(){
         userDto = UserDTO.builder()
@@ -54,6 +59,20 @@ public class UserServiceTest {
                 .email("nikhiltiwarp29@gmail.com")
                 .password("NikTiwari@1234")
                 .build();
+
+        user = User.builder()
+                .userName(userDto.getUserName())
+                .email(userDto.getEmail())
+                .password("encodedPassword")
+                .accountType(userDto.getAccountType())
+                .build();
+
+        changePasswordRequestDTO = ChangePasswordRequestDTO.builder()
+                .oldPassword("NikTiwari@1234")
+                .newPassword("NikTiwari@123")
+                .confirmPassword("NikTiwari@123")
+                .build();
+
     }
 
     @Test
@@ -145,12 +164,6 @@ public class UserServiceTest {
     @Test
     void loginUser_SuccessFull() throws JobPortalException {
         // ARRANGE
-        User user = User.builder()
-                .userName(userDto.getUserName())
-                .email(userDto.getEmail())
-                .password("encodedPassword")
-                .accountType(userDto.getAccountType())
-                .build();
 
         when(userRepository.findByEmail(loginDto.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(loginDto.getPassword(), user.getPassword())).thenReturn(true);
@@ -168,4 +181,94 @@ public class UserServiceTest {
         verify(passwordEncoder, times(1)).matches(loginDto.getPassword(), user.getPassword());
         verify(modelMapper, times(1)).map(user, UserDTO.class);
     }
+
+    @Test
+    void changePassword_successfully() throws JobPortalException {
+        // ARRANGE
+        when(userRepository.findByEmail(userDto.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(changePasswordRequestDTO.getOldPassword(), user.getPassword()))
+                .thenReturn(true);
+        when(passwordEncoder.encode(changePasswordRequestDTO.getNewPassword()))
+                .thenReturn("encodedNewPassword");
+
+        // ACT
+        userService.changePassword(userDto.getEmail(), changePasswordRequestDTO);
+
+        // ASSERT & VERIFY
+        verify(passwordEncoder, times(1))
+                .matches(changePasswordRequestDTO.getOldPassword(), "encodedPassword");
+
+        verify(passwordEncoder, times(1))
+                .encode(changePasswordRequestDTO.getNewPassword());
+
+        verify(userRepository, times(1)).save(user);
+
+        assertThat(user.getPassword())
+                .isNotBlank()
+                .isEqualTo("encodedNewPassword")
+                .isNotEqualTo("encodedPassword");
+    }
+
+    @Test
+    void changePassword_userNotFound_shouldThrowException() {
+        // ARRANGE
+        when(userRepository.findByEmail(userDto.getEmail())).thenReturn(Optional.empty());
+
+        // ACT + ASSERT
+        assertThatThrownBy(() -> userService.changePassword(userDto.getEmail(), changePasswordRequestDTO))
+                .isInstanceOf(JobPortalException.class)
+                .hasMessage("user.does.not.exists");
+
+        // VERIFY
+        verify(userRepository, times(1)).findByEmail(userDto.getEmail());
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changePassword_oldPasswordIncorrect_shouldThrowException() {
+        // ARRANGE
+        when(userRepository.findByEmail(userDto.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(changePasswordRequestDTO.getOldPassword(), user.getPassword()))
+                .thenReturn(false);
+
+        // ACT + ASSERT
+        assertThatThrownBy(() -> userService.changePassword(userDto.getEmail(), changePasswordRequestDTO))
+                .isInstanceOf(JobPortalException.class)
+                .hasMessage("user.old.password.incorrect");
+
+        // VERIFY
+        verify(passwordEncoder, times(1))
+                .matches(changePasswordRequestDTO.getOldPassword(), "encodedPassword");
+
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void changePassword_newPasswordAndConfirmMismatch_shouldThrowException() {
+        // ARRANGE
+        ChangePasswordRequestDTO badRequest = ChangePasswordRequestDTO.builder()
+                .oldPassword("NikTiwari@1234")
+                .newPassword("newPass")
+                .confirmPassword("mismatchPass")
+                .build();
+
+        when(userRepository.findByEmail(userDto.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(badRequest.getOldPassword(), user.getPassword())).thenReturn(true);
+
+        // ACT + ASSERT
+        assertThatThrownBy(() -> userService.changePassword(userDto.getEmail(), badRequest))
+                .isInstanceOf(JobPortalException.class)
+                .hasMessage("user.new.password.confirm.password.do.mot.match");
+
+        // VERIFY
+        verify(passwordEncoder, times(1))
+                .matches(badRequest.getOldPassword(), "encodedPassword");
+
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
 }

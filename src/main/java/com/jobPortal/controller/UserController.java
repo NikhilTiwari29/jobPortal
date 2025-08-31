@@ -1,6 +1,8 @@
 package com.jobPortal.controller;
 
+import com.jobPortal.dto.ChangePasswordRequestDTO;
 import com.jobPortal.dto.LoginDTO;
+import com.jobPortal.dto.ResponseDTO;
 import com.jobPortal.dto.UserDTO;
 import com.jobPortal.exception.JobPortalException;
 import com.jobPortal.service.UserService;
@@ -8,10 +10,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -36,5 +35,15 @@ public class UserController {
         log.info("Login request received for email={}", loginDto.getEmail());
         UserDTO response = userService.loginUser(loginDto);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    //TODO: Need to change this using jwt rather than sending email
+    @PostMapping("/change-password")
+    public ResponseEntity<ResponseDTO> changePassword(
+            @RequestParam String email,
+            @RequestBody @Valid ChangePasswordRequestDTO request
+    ) throws JobPortalException {
+        userService.changePassword(email,request);
+        return new ResponseEntity<>(new ResponseDTO("Password changed successfully"),HttpStatus.OK);
     }
 }

@@ -1,5 +1,6 @@
 package com.jobPortal;
 
+import com.jobPortal.dto.ChangePasswordRequestDTO;
 import com.jobPortal.dto.LoginDTO;
 import com.jobPortal.dto.UserDTO;
 import com.jobPortal.entity.User;
@@ -295,4 +296,95 @@ public class UserControllerIT {
                 .jsonPath("$.errorCode").isEqualTo(400);
 
     }
+
+    @Test
+    void changePassword_success() {
+        // save user with encoded password
+        user.setPassword(passwordEncoder.encode(user.getPassword())); // "NikTiwari@1234"
+        userRepository.save(user);
+
+        ChangePasswordRequestDTO changePasswordRequestDTO = ChangePasswordRequestDTO.builder()
+                        .oldPassword("NikTiwari@1234")
+                        .newPassword("NewPass@1234")
+                        .confirmPassword("NewPass@1234")
+                        .build();
+
+        webTestClient.post()
+                .uri("/users/change-password?email=" + user.getEmail())
+                .bodyValue(changePasswordRequestDTO)
+                .exchange()
+                .expectStatus().isOk();
+
+        // verify password updatedUser in DB
+        User updatedUser = userRepository.findByEmail(user.getEmail()).orElseThrow();
+        assertThat(passwordEncoder.matches("NewPass@1234", updatedUser.getPassword())).isTrue();
+    }
+
+    @Test
+    void changePassword_wrongOldPassword() {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+
+        ChangePasswordRequestDTO changePasswordRequestDTO = ChangePasswordRequestDTO.builder()
+                .oldPassword("NikTiwari#1234")
+                .newPassword("NewPass@1234")
+                .confirmPassword("NewPass@1234")
+                .build();
+
+        webTestClient.post()
+                .uri("/users/change-password?email=" + user.getEmail())
+                .bodyValue(changePasswordRequestDTO)
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("The old password you entered is incorrect. Please try again.")
+                .jsonPath("$.errorCode").isEqualTo(409);
+
+        // ensure password not updated
+        User same = userRepository.findByEmail(user.getEmail()).orElseThrow();
+        assertThat(passwordEncoder.matches("NikTiwari@1234", same.getPassword())).isTrue();
+    }
+
+    @Test
+    void changePassword_newAndConfirmMismatch() {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+
+        ChangePasswordRequestDTO changePasswordRequestDTO = ChangePasswordRequestDTO.builder()
+                .oldPassword("NikTiwari@1234")
+                .newPassword("NewPass@1234")
+                .confirmPassword("NewPass@123")
+                .build();
+
+        webTestClient.post()
+                .uri("/users/change-password?email=" + user.getEmail())
+                .bodyValue(changePasswordRequestDTO)
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("New password and confirm password do not match.")
+                .jsonPath("$.errorCode").isEqualTo(409);
+
+        User same = userRepository.findByEmail(user.getEmail()).orElseThrow();
+        assertThat(passwordEncoder.matches("NikTiwari@1234", same.getPassword())).isTrue();
+    }
+
+    @Test
+    void changePassword_userNotFound() {
+        ChangePasswordRequestDTO changePasswordRequestDTO = ChangePasswordRequestDTO.builder()
+                .oldPassword("NikTiwari@1234")
+                .newPassword("NewPass@1234")
+                .confirmPassword("NewPass@1234")
+                .build();
+
+        webTestClient.post()
+                .uri("/users/change-password?email=notfound@example.com")
+                .bodyValue(changePasswordRequestDTO)
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.errorMessages").isEqualTo("No account found with this email. Please check and try again.")
+                .jsonPath("$.errorCode").isEqualTo(409);
+    }
+
 }

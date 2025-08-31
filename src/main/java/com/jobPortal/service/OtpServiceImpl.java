@@ -6,16 +6,14 @@ import com.jobPortal.repository.OtpRepository;
 import com.jobPortal.repository.UserRepository;
 import com.jobPortal.utility.Utils;
 import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-import static com.jobPortal.utility.Utils.htmlContent;
 import static com.jobPortal.utility.Utils.sendOtpMail;
 
 @Service
@@ -92,6 +90,15 @@ public class OtpServiceImpl implements OtpService {
         otpRepository.delete(otp);
 
         log.debug("OTP verified successfully for email={}", email);
+    }
+
+    // Run every 10 minutes
+    @Scheduled(fixedRate = 5 * 60 * 1000)
+    @Transactional
+    public void cleanupExpiredOTPS() {
+        log.info("deleting the expired otp");
+        LocalDateTime now = LocalDateTime.now();
+        otpRepository.deleteAllByCreationTimeBefore(now.minusMinutes(5));
     }
 
 }

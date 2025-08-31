@@ -1,5 +1,6 @@
 package com.jobPortal.service;
 
+import com.jobPortal.dto.ChangePasswordRequestDTO;
 import com.jobPortal.dto.LoginDTO;
 import com.jobPortal.dto.UserDTO;
 import com.jobPortal.entity.User;
@@ -68,5 +69,30 @@ public class UserServiceImpl implements UserService{
         log.info("Login successful for userId={} email={}", user.getId(), user.getEmail());
 
         return modelMapper.map(user, UserDTO.class);
+    }
+
+    @Override
+    public void changePassword(String email, ChangePasswordRequestDTO request) throws JobPortalException {
+
+        // Fetch user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> {
+                    log.warn("Password change failed: no user found with email={}", email);
+                    return new JobPortalException("user.does.not.exists");
+                });
+
+        // Validate password
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            log.warn("Password change failed: invalid credentials for email={}", email);
+            throw new JobPortalException("user.old.password.incorrect");
+        }
+
+        // Validate new password & confirm password are same
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new JobPortalException("user.new.password.confirm.password.do.mot.match");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }
