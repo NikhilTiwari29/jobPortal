@@ -7,15 +7,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.UUID;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class UserDTO {
 
-    private UUID id;
+    private Long id;
 
     @NotBlank(message = "{user.username.required}")
     @Size(min = 2, max = 50, message = "{user.username.size}")

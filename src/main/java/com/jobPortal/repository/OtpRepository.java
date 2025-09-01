@@ -6,10 +6,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface OtpRepository extends JpaRepository<Otp, UUID> {
+public interface OtpRepository extends JpaRepository<Otp, Long> {
     Optional<Otp> findByEmail(String email);
 
     void deleteAllByCreationTimeBefore(LocalDateTime localDateTime);

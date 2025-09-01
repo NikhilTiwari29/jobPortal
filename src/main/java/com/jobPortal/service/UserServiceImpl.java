@@ -21,10 +21,13 @@ public class UserServiceImpl implements UserService{
 
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, ModelMapper modelMapper, PasswordEncoder passwordEncoder) {
+    private final ProfileService profileService;
+
+    public UserServiceImpl(UserRepository userRepository, ModelMapper modelMapper, PasswordEncoder passwordEncoder, ProfileService profileService) {
         this.userRepository = userRepository;
         this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
+        this.profileService = profileService;
     }
 
     @Override
@@ -44,6 +47,10 @@ public class UserServiceImpl implements UserService{
         log.debug("Password encoded for email={}", userDto.getEmail());
 
         User savedUser = userRepository.save(user);
+
+        // delegate profile creation
+        profileService.createProfileForUser(savedUser);
+
         log.info("User successfully registered with id={} and email={}", savedUser.getId(), savedUser.getEmail());
 
         return modelMapper.map(savedUser, UserDTO.class);
