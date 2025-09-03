@@ -6,14 +6,17 @@ import com.jobPortal.dto.ResponseDTO;
 import com.jobPortal.exception.JobPortalException;
 import com.jobPortal.service.OtpService;
 import jakarta.mail.MessagingException;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 @Slf4j
+@Validated
 public class AuthController {
 
     private final OtpService otpService;
@@ -23,13 +26,13 @@ public class AuthController {
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<ResponseDTO> sendOtp(@RequestBody SendOtpRequestDTO sendOtpRequestDTO) throws JobPortalException, MessagingException {
+    public ResponseEntity<ResponseDTO> sendOtp(@RequestBody @Valid SendOtpRequestDTO sendOtpRequestDTO) throws JobPortalException, MessagingException {
         otpService.generateAndSendOtp(sendOtpRequestDTO.getEmail());
         return new ResponseEntity<>(new ResponseDTO("OTP sent successfully"), HttpStatus.OK);
     }
 
     @PostMapping("/verify/otp")
-    public ResponseEntity<ResponseDTO> verifyOtp(@RequestBody VerifyOtpRequestDto verifyOtpRequestDto) throws JobPortalException, MessagingException {
+    public ResponseEntity<ResponseDTO> verifyOtp(@RequestBody @Valid VerifyOtpRequestDto verifyOtpRequestDto) throws JobPortalException, MessagingException {
         otpService.verifyOtp(verifyOtpRequestDto.getEmail(),verifyOtpRequestDto.getOtpCode());
         return new ResponseEntity<>(new ResponseDTO("OTP verified successfully"), HttpStatus.OK);
     }

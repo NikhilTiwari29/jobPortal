@@ -23,6 +23,10 @@ public class Profile {
 
     @Column(nullable = false, unique = true, length = 150)
     private String email;
+
+    @Column(length = 500)
+    private String picture;
+
     private String jobTitle;
     private String company;
     private String location;

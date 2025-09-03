@@ -19,6 +19,8 @@ public class ProfileDTO {
     @NotBlank(message = "{user.profile.name.required}")
     private String name;
 
+    private String resume;
+
     @Email(message = "{user.email.invalid}")
     @NotBlank(message = "{user.email.required}")
     private String email;
