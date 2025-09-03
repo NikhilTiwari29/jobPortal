@@ -8,4 +8,5 @@ public interface ProfileService {
     void createProfileForUser(User user);
     ProfileDTO getProfile(Long id) throws JobPortalException;
     ProfileDTO updateProfile(ProfileDTO profileDTO) throws JobPortalException;
+    void saveJob(Long profileId, Long jobId) throws JobPortalException;
 }

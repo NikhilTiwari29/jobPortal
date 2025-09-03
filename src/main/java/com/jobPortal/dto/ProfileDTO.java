@@ -36,4 +36,5 @@ public class ProfileDTO {
 
     private List<ExperienceDTO> experiences;
     private List<CertificationDTO> certifications;
+    private List<JobDTO> savedJobs;
 }

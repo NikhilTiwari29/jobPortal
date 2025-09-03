@@ -36,4 +36,13 @@ public class ProfileController {
         ProfileDTO profile = profileService.updateProfile(profileDTO);
         return ResponseEntity.ok(profile);
     }
+
+    @PostMapping("/{profileId}/save-job/{jobId}")
+    public ResponseEntity<String> saveJob(
+            @PathVariable Long profileId,
+            @PathVariable Long jobId) throws JobPortalException {
+
+        profileService.saveJob(profileId, jobId);
+        return ResponseEntity.ok("Job saved successfully");
+    }
 }

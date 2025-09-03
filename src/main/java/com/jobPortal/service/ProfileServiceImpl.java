@@ -3,11 +3,9 @@ package com.jobPortal.service;
 import com.jobPortal.dto.CertificationDTO;
 import com.jobPortal.dto.ExperienceDTO;
 import com.jobPortal.dto.ProfileDTO;
-import com.jobPortal.entity.Certification;
-import com.jobPortal.entity.Experience;
-import com.jobPortal.entity.Profile;
-import com.jobPortal.entity.User;
+import com.jobPortal.entity.*;
 import com.jobPortal.exception.JobPortalException;
+import com.jobPortal.repository.JobRepository;
 import com.jobPortal.repository.ProfileRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +20,12 @@ public class ProfileServiceImpl implements ProfileService {
 
     private final ProfileRepository profileRepository;
     private final ModelMapper modelMapper;
+    private final JobRepository jobRepository;
 
-    public ProfileServiceImpl(ProfileRepository profileRepository, ModelMapper modelMapper) {
+    public ProfileServiceImpl(ProfileRepository profileRepository, ModelMapper modelMapper, JobRepository jobRepository) {
         this.profileRepository = profileRepository;
         this.modelMapper = modelMapper;
+        this.jobRepository = jobRepository;
     }
 
     @Transactional
@@ -113,5 +113,25 @@ public class ProfileServiceImpl implements ProfileService {
         log.debug("Profile updated successfully with id: {}", profileDTO.getId());
 
         return modelMapper.map(updatedProfile, ProfileDTO.class);
+    }
+
+    @Override
+    public void saveJob(Long profileId, Long jobId) throws JobPortalException {
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new JobPortalException("PROFILE_NOT_FOUND"));
+
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new JobPortalException("JOB_NOT_FOUND"));
+
+        boolean alreadySaved = profile.getSavedJobs().stream()
+                .anyMatch(saved -> saved.getId().equals(jobId));
+
+        if (alreadySaved) {
+            throw new JobPortalException("JOB_ALREADY_SAVED");
+        }
+
+        profile.getSavedJobs().add(job);
+
+        profileRepository.save(profile);
     }
 }
