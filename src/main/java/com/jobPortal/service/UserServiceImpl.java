@@ -6,6 +6,7 @@ import com.jobPortal.dto.NotificationDTO;
 import com.jobPortal.dto.UserDTO;
 import com.jobPortal.entity.User;
 import com.jobPortal.exception.JobPortalException;
+import com.jobPortal.security.JwtService;
 import com.jobPortal.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -23,17 +24,19 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final ProfileService profileService;
     private final NotificationService notificationService; // ✅ inject notification service
+    private final JwtService jwtService;
 
     public UserServiceImpl(UserRepository userRepository,
                            ModelMapper modelMapper,
                            PasswordEncoder passwordEncoder,
                            ProfileService profileService,
-                           NotificationService notificationService) {
+                           NotificationService notificationService, JwtService jwtService) {
         this.userRepository = userRepository;
         this.modelMapper = modelMapper;
         this.passwordEncoder = passwordEncoder;
         this.profileService = profileService;
         this.notificationService = notificationService;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -63,7 +66,6 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         notificationService.sendNotification(notification);
-
         return modelMapper.map(savedUser, UserDTO.class);
     }
 
@@ -84,7 +86,17 @@ public class UserServiceImpl implements UserService {
 
         log.info("Login successful for userId={} email={}", user.getId(), user.getEmail());
 
-        return modelMapper.map(user, UserDTO.class);
+        return modelMapper.map(user,UserDTO.class);
+    }
+
+    @Override
+    public UserDTO getUserById(Long id) throws JobPortalException {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("Login failed: no user found with id={}", id);
+                    return new JobPortalException("user.does.not.exists");
+                });
+        return modelMapper.map(user,UserDTO.class);
     }
 
     @Override

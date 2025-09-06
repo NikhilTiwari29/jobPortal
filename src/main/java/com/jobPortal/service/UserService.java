@@ -11,5 +11,7 @@ public interface UserService {
 
     UserDTO loginUser(LoginDTO loginDto) throws JobPortalException;
 
+    UserDTO getUserById(Long id) throws JobPortalException;
+
     void changePassword(String email, @Valid ChangePasswordRequestDTO request) throws JobPortalException;
 }
